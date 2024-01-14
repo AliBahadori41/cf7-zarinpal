@@ -20,8 +20,8 @@ register_uninstall_hook(__FILE__, "cf7_zarinpal_uninstall");
  */
 function cf7ZarinpalActivate()
 {
-	global $wpdb;
-	
+    global $wpdb;
+
     $table_name = $wpdb->prefix . "cf7_zarinpal_transactions";
 
     $sql = "CREATE TABLE IF NOT EXISTS " . $table_name . " (
@@ -56,11 +56,11 @@ function cf7ZarinpalActivate()
     } else if (file_exists(dirname(ABSPATH) . "/wp-config.php") && is_writable(dirname(ABSPATH) . "/wp-config.php")) {
         wp_config_put('/');
     } else {
-        ?>
+?>
         <div class="error">
-            <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been activated.', 'cf7pp'); ?></p>
+            <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been activated.', 'cf7_zarinpal'); ?></p>
         </div>
-        <?php
+    <?php
         exit;
     }
 
@@ -79,7 +79,6 @@ function cf7ZarinpalActivate()
  */
 function cf7_zarinpal_deactivate()
 {
-
     function wp_config_delete($slash = '')
     {
         $config = file_get_contents(ABSPATH . "wp-config.php");
@@ -92,9 +91,9 @@ function cf7_zarinpal_deactivate()
     } else if (file_exists(dirname(ABSPATH) . "/wp-config.php") && is_writable(dirname(ABSPATH) . "/wp-config.php")) {
         wp_config_delete('/');
     } else if (file_exists(ABSPATH . "wp-config.php") && !is_writable(ABSPATH . "wp-config.php")) {
-        ?>
+    ?>
         <div class="error">
-            <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been deactivated.', 'cf7pp'); ?></p>
+            <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been deactivated.', 'cf7_zarinpal'); ?></p>
         </div>
         <button onclick="goBack()">Go Back and try again</button>
         <script>
@@ -102,12 +101,12 @@ function cf7_zarinpal_deactivate()
                 window.history.back();
             }
         </script>
-        <?php
+    <?php
         exit;
     } else if (file_exists(dirname(ABSPATH) . "/wp-config.php") && !is_writable(dirname(ABSPATH) . "/wp-config.php")) {
-        ?>
+    ?>
         <div class="error">
-            <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been deactivated.', 'cf7pp'); ?></p>
+            <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been deactivated.', 'cf7_zarinpal'); ?></p>
         </div>
         <button onclick="goBack()">Go Back and try again</button>
         <script>
@@ -115,12 +114,12 @@ function cf7_zarinpal_deactivate()
                 window.history.back();
             }
         </script>
-        <?php
+    <?php
         exit;
     } else {
-        ?>
+    ?>
         <div class="error">
-            <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been deactivated.', 'cf7pp'); ?></p>
+            <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been deactivated.', 'cf7_zarinpal'); ?></p>
         </div>
         <button onclick="goBack()">Go Back and try again</button>
         <script>
@@ -128,14 +127,13 @@ function cf7_zarinpal_deactivate()
                 window.history.back();
             }
         </script>
-        <?php
+    <?php
         exit;
     }
-    
-  
+
+
     delete_option("cf7_zarinpal");
     delete_option("cf7_zarinpal_my_plugin_notice_shown");
-
 }
 
 
@@ -147,12 +145,52 @@ function cf7_zarinpal_uninstall()
 }
 
 // display activation notice
-add_action('admin_notices', 'cf7pp_my_plugin_admin_notices');
-
-function cf7pp_my_plugin_admin_notices() {
-    if (!get_option('cf7pp_my_plugin_notice_shown')) {
-        echo "<div class='updated'><p><a href='admin.php?page=cf7pp_admin_table'>برای تنظیم اطلاعات درگاه  کلیک کنید</a>.</p></div>";
-        update_option("cf7pp_my_plugin_notice_shown", "true");
+add_action('admin_notices', 'cf7_zarinpal_my_plugin_admin_notices');
+function cf7_zarinpal_my_plugin_admin_notices()
+{
+    if (!get_option('cf7_zarinpal_my_plugin_notice_shown')) {
+        echo "<div class='updated'><p><a href='admin.php?page=cf7_zarinpal_admin_table'>برای تنظیم اطلاعات درگاه  کلیک کنید</a>.</p></div>";
+        update_option("cf7_zarinpal_my_plugin_notice_shown", "true");
     }
 }
 
+
+include_once(ABSPATH . 'wp-admin/includes/plugin.php');
+if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
+
+    // add paypal menu under contact form 7 menu
+    add_action('admin_menu', 'cf7_zarinpal_admin_menu', 20);
+    function cf7_zarinpal_admin_menu()
+    {
+        $addnew = add_submenu_page(
+            'wpcf7',
+            __('تنظیمات زرین پال', 'contact-form-7'),
+            __('تنظیمات زرین پال', 'contact-form-7'),
+            'wpcf7_edit_contact_forms',
+            'cf7_zarinpal_admin_table',
+            'cf7_zarinpal_admin_table'
+        );
+
+        $addnew = add_submenu_page(
+            'wpcf7',
+            __('لیست تراکنش ها', 'contact-form-7'),
+            __('لیست تراکنش ها', 'contact-form-7'),
+            'wpcf7_edit_contact_forms',
+            'cf7_zarinpal_admin_transactions_list',
+            'cf7_zarinpal_admin_transactions_list'
+        );
+    }
+} else {
+    /**
+     * Show notice if contact form is not installed or not activated.
+     */
+    function cf7_zarinpal_my_admin_notice()
+    {
+        ?>
+        <div class="error">
+			<p> <?php echo _e('<b> افزونه درگاه بانکی برای افزونه Contact Form 7 :</b> Contact Form 7 باید فعال باشد ', 'my-text-domain') ?>
+		</div>
+        <?php
+    }
+    add_action('admin_notices', 'cf7_zarinpal_my_admin_notice');
+}
