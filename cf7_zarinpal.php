@@ -81,6 +81,25 @@ function cf7ZarinpalActivate()
 }
 
 
+function cf7ZarinpalCreatePage($title, $body)
+{
+    $tmp = '
+	<html>
+	<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>' . $title . '</title>
+	</head>
+	<link rel="stylesheet"  media="all" type="text/css" href="' . plugins_url('style.css', __FILE__) . '">
+	<body class="vipbody">	
+	<div class="mrbox2" > 
+	<h3><span>' . $title . '</span></h3>
+	' . $body . '	
+	</div>
+	</body>
+	</html>';
+    return $tmp;
+}
+
 /**
  * De-Active plugin
  */
@@ -190,6 +209,12 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
     }
     add_action('admin_menu', 'cf7_zarinpal_admin_menu', 20);
 
+
+    add_action('wpcf7_before_send_mail', 'cf7_zarinpal_before_send_mail');
+    function cf7_zarinpal_before_send_mail($cf7)
+    {
+    }
+
     function cf7_zarinpal_after_send_mail($cf7)
     {
         global $wpdb;
@@ -203,20 +228,53 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         if ($enable == "1") {
             if ($email == "2") {
 
-                $param = [];
+                $zarinpal_setting = get_option('cf7_zarinpal');
+                $amount = get_post_meta($postid, "_cf7_zarinpal_price", true);
+
+                $submission = WPCF7_Submission::get_instance();
+                $user_email = '';
+                $user_mobile = '';
+                $description = '';
+                $user_price = '';
+
+                if ($submission) {
+                    $data = $submission->get_posted_data();
+                    $user_email = isset($data['user_email']) ? $data['user_email'] : "";
+                    $user_mobile = isset($data['user_mobile']) ? $data['user_mobile'] : "";
+                    $description = isset($data['description']) ? $data['description'] : "پرداخت برای فرم ارتباط با ما. شماره فرم : " . $postid;
+                    $user_price = isset($data['user_price']) ? $data['user_price'] : "";
+                }
+
+                if ($amount == "" || $amount == null) {
+                    $amount = $user_price;
+                }
+
+                $param = [
+                    "merchant_id" => $zarinpal_setting['merchant_id'],
+                    "amount" => $amount,
+                    "callback_url" => $zarinpal_setting['callback_url'],
+                    'description' => $description,
+                    'currency' => $zarinpal_setting['currency'],
+                    'metadata' => [
+                        'mobile' => strlen($user_mobile) == 0 ? "0" : $user_mobile,
+                        'email' => $user_email ? $user_email : "0",
+                    ],
+                ];
 
                 $result = request_payment($param);
 
                 if (is_string($result)) {
                     echo "خطا دراتصال به درگاه : " . $result;
                 } else {
-
-                    $wpdb->insert(getTableName(), []);
-
                     if ($result['data']['code'] === 100) {
-                    }
-                    if ($result['data']['code'] === 101) {
+                       
+                        header('Location: https://www.zarinpal.com/pg/StartPay/' . $result['data']['authority']);
+                        exit;
                     } else {
+
+                        $tmp = "<p>کد خطا : ". $result['errors']['code'] ." </br>". error_message($result['errors']['code']) ."</p>";
+                        echo cf7ZarinpalCreatePage('خطا : ', $tmp);
+                        exit;
                     }
                 }
             }
@@ -511,4 +569,88 @@ function request_payment(array $param)
     curl_close($ch);
 
     return $err ? $err : $result;
+}
+
+/**
+ * Zarinpal error message.
+ * 
+ * @param int $code
+ * @return string
+ */
+function error_message($code)
+{
+    $message = null;
+
+    switch ($code) {
+        case $code == -9:
+            $message = ('اطلاعات ارسال شده نادرست می باشد.');
+            $message .= "<br>" . ('1- مرچنت کد داخل تنظیمات وارد نشده باشد');
+            $message .= "<br>" . ('2- مبلغ پرداختی کمتر یا بیشتر از حد مجاز می باشد');
+        break; 
+        case $code == -10:
+            $message = ('ای پی یا مرچنت كد پذیرنده صحیح نیست.');
+        break; 
+        case $code == -11:
+            $message = ('مرچنت کد فعال نیست، پذیرنده مشکل خود را به امور مشتریان زرین‌پال ارجاع دهد.');
+        break; 
+        case $code == -12:
+            $message = ('تلاش بیش از دفعات مجاز در یک بازه زمانی کوتاه به امور مشتریان زرین پال اطلاع دهید');
+        break; 
+        case $code == -15:
+            $message = ('درگاه پرداخت به حالت تعلیق در آمده است، پذیرنده مشکل خود را به امور مشتریان زرین‌پال ارجاع دهد.');
+        break; 
+        case $code == -16:
+            $message = ('سطح تایید پذیرنده پایین تر از سطح نقره ای است.');
+        break; 
+        case $code == -17:
+            $message = ('محدودیت پذیرنده در سطح آبی');
+        break; 
+        case $code == -30:
+            $message = ('پذیرنده اجازه دسترسی به سرویس تسویه اشتراکی شناور را ندارد.');
+        break; 
+        case $code == -31:
+            $message = ('حساب بانکی تسویه را به پنل اضافه کنید. مقادیر وارد شده برای تسهیم درست نیست. پذیرنده جهت استفاده از خدمات سرویس تسویه اشتراکی شناور، باید حساب بانکی معتبری به پنل کاربری خود اضافه نماید.');
+        break; 
+        case $code == -32:
+            $message = ('مبلغ وارد شده از مبلغ کل تراکنش بیشتر است.');
+        break; 
+        case $code == -33:
+            $message = ('درصدهای وارد شده صحیح نیست.');
+        break; 
+        case $code == -34:
+            $message = ('مبلغ وارد شده از مبلغ کل تراکنش بیشتر است.');
+        break; 
+        case $code == -35:
+            $message = ('تعداد افراد دریافت کننده تسهیم بیش از حد مجاز است.');
+        break; 
+        case $code == -36:
+            $message = ('حداقل مبلغ جهت تسهیم باید 10000 ریال باشد');
+        break; 
+        case $code == -37:
+            $message = ('یک یا چند شماره شبای وارد شده برای تسهیم از سمت بانک غیر فعال است.');
+        break; 
+        case $code == -38:
+            $message = ('خط،عدم تعریف صحیح شبا،لطفا دقایقی دیگر تلاش کنید.');
+        break; 
+        case $code == -39:
+            $message = ('خطایی رخ داده است به امور مشتریان زرین پال اطلاع دهید');
+        break; 
+        case $code == -50:
+            $message = ('مبلغ پرداخت شده با مقدار مبلغ ارسالی در متد وریفای متفاوت است.');
+        break; 
+        case $code == -51:
+            $message = ('پرداخت ناموفق');
+        break; 
+        case $code == -52:
+            $message = ('خطای غیر منتظره‌ای رخ داده است. پذیرنده مشکل خود را به امور مشتریان زرین‌پال ارجاع دهد.');
+        break; 
+        case $code == -53:
+            $message = ('پرداخت متعلق به این مرچنت کد نیست.');
+        break; 
+        case $code == -54:
+            $message = ('اتوریتی نامعتبر است.');
+        break;
+    }
+
+    return $message;
 }
