@@ -35,7 +35,7 @@ function cf7ZarinpalActivate()
         transaction_authority VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
         transaction_reference VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NULL,
         gateway VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
-        cost bigint(11) DEFAULT '0' NOT NULL,
+        price bigint(11) DEFAULT '0' NOT NULL,
         created_at bigint(11) DEFAULT '0' NOT NULL,
         email VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci  NULL,
         description VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
@@ -224,17 +224,9 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
     }
     add_action('wpcf7_mail_sent', 'cf7_zarinpal_after_send_mail');
 
-
-
-
     function cf7_zarinpal_admin_table()
     {
-        $zarinpal_setting = get_option('cf7_zarinpal');
-
-        delete_option('cf7_zarinpal');
-
         if (isset($_POST['zarinpal_setting_submit'])) {
-
             $options['merchant_id'] = sanitize_text_field($_POST['merchant_id']);
             $options['callback_url'] = sanitize_text_field($_POST['callback_url']);
             $options['error_color'] = sanitize_text_field($_POST['error_color']);
@@ -249,8 +241,9 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
             echo "</strong></p></div>";
         }
 
+        $zarinpal_setting = get_option('cf7_zarinpal');
 
-        if($zarinpal_setting['currency'] == 'IRR') {
+        if ($zarinpal_setting['currency'] == 'IRR') {
             $irr_selected = true;
         } else {
             $irr_selected = false;
@@ -273,8 +266,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                             </label>
                         </th>
                         <td>
-                            <input required dir="ltr" value="<?php echo $zarinpal_setting['merchant_id']; ?>"
-                             type="text" name="merchant_id" id="merchant_id" placeholder="مرچنت کد" class="regular-text" style="display: block;">
+                            <input required dir="ltr" value="<?php echo $zarinpal_setting['merchant_id']; ?>" type="text" name="merchant_id" id="merchant_id" placeholder="مرچنت کد" class="regular-text" style="display: block;">
                             <span class="description">
                                 برای دریافت مرچنت کد درگاه خود به پنل کاربری
                                 <a target="_blank" href="https://zarinpal.com">زرین پال</a>
@@ -290,8 +282,8 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                         </th>
                         <td>
                             <select required name="currency" id="currency" style="display: block;">
-                                <option <?php $irr_selected === true ? 'selected' : '';?> value="IRR">ریال</option>
-                                <option <?php $irr_selected === false ? 'selected' : '' ;?> value="IRT">تومان</option>
+                                <option <?php echo $irr_selected === true ? 'selected' : ''; ?> value="IRR">ریال</option>
+                                <option <?php echo $irr_selected === false ? 'selected' : ''; ?> value="IRT">تومان</option>
                             </select>
                             <span class="description">
                                 مبلغ پرداختی برحسب ارز انتخاب شده به درگاه ارسال می گردد.
@@ -305,8 +297,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                             </label>
                         </th>
                         <td>
-                            <input dir="ltr" value="<?php echo $zarinpal_setting['callback_url']; ?>"
-                             required type="text" name="callback_url" id="callback_url" placeholder="آدرس بازگشت از درگاه" class="regular-text" style="display: block;">
+                            <input dir="ltr" value="<?php echo $zarinpal_setting['callback_url']; ?>" required type="text" name="callback_url" id="callback_url" placeholder="آدرس بازگشت از درگاه" class="regular-text" style="display: block;">
                             <span class="description">
                                 یک برگه ایجاد کنید و این کد کوتاه [zarinpal_result_payment] را در ان قرار دهید.
                                 <br>
@@ -357,9 +348,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                             </label>
                         </th>
                         <td>
-                            <input
-                            value="<?php echo $zarinpal_setting['sucess_color']; ?>"
-                             required dir="ltr" type="text" name="sucess_color" id="sucess_color" placeholder="نام یا کد رنگ" class="regular-text" style="display: block;color: <?php echo $zarinpal_setting['sucess_color']; ?>">
+                            <input value="<?php echo $zarinpal_setting['sucess_color']; ?>" required dir="ltr" type="text" name="sucess_color" id="sucess_color" placeholder="نام یا کد رنگ" class="regular-text" style="display: block;color: <?php echo $zarinpal_setting['sucess_color']; ?>">
                             <span class="description">
                                 مانند : #8BC34A یا نام رنگ green
                             </span>
@@ -372,9 +361,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                             </label>
                         </th>
                         <td>
-                            <input 
-                            value="<?php echo $zarinpal_setting['error_color']; ?>"
-                             required dir="ltr" type="text" name="error_color" id="error_color" placeholder="نام یا کد رنگ" class="regular-text" style="display: block;color: <?php echo $zarinpal_setting['error_color']; ?>">
+                            <input value="<?php echo $zarinpal_setting['error_color']; ?>" required dir="ltr" type="text" name="error_color" id="error_color" placeholder="نام یا کد رنگ" class="regular-text" style="display: block;color: <?php echo $zarinpal_setting['error_color']; ?>">
                             <span class="description">
                                 مانند : #f44336 یا نام رنگ red
                             </span>
@@ -391,6 +378,101 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         </form>
     <?php
     }
+
+
+
+    add_action('wpcf7_admin_after_additional_settings', 'cf7_zarinpal_admin_after_additional_settings');
+    function cf7_zarinpal_editor_panels($panels)
+    {
+        $new_page = array(
+            'PricePay' => array(
+                'title' => __('اطلاعات پرداخت', 'contact-form-7'),
+                'callback' => 'cf7_zarinpal_admin_after_additional_settings'
+            )
+        );
+
+        $panels = array_merge($panels, $new_page);
+
+        return $panels;
+    }
+
+    add_filter('wpcf7_editor_panels', 'cf7_zarinpal_editor_panels');
+
+
+    function cf7_zarinpal_admin_after_additional_settings($cf7)
+    {
+
+        if (isset($_GET['post'])) {
+            $post_id = sanitize_text_field($_GET['post']);
+            $enable = get_post_meta($post_id, "_cf7_zarinpal_enable", true);
+            $price = get_post_meta($post_id, "_cf7_zarinpal_price", true);
+
+            if ($enable == "1") {
+                $checked = "CHECKED";
+            } else {
+                $checked = "";
+            }
+
+            $admin_table_output = "";
+            $admin_table_output .= "<form>";
+            $admin_table_output .= "<div id='additional_settings-sortables' class='meta-box-sortables ui-sortable'><div id='additionalsettingsdiv' class='postbox'>";
+            $admin_table_output .= "<div class='handlediv' title='Click to toggle'><br></div><h3 class='hndle ui-sortable-handle'> <span>اطلاعات پرداخت برای فرم</span></h3>";
+            $admin_table_output .= "<div class='inside'>";
+            $admin_table_output .= "<div class='mail-field'>";
+            $admin_table_output .= "<input name='enable' id='cf71' value='1' type='checkbox' $checked>";
+            $admin_table_output .= "<label for='cf71'>فعال سازی امکان پرداخت آنلاین</label>";
+            $admin_table_output .= "</div>";
+            $currency_type = get_option('cf7_zarinpal')['currency'] == 'IRR' ? 'ریال' : 'تومان';
+            $admin_table_output .= "<table>";
+            $admin_table_output .= "<tr><td>مبلغ: </td><td><input type='text' name='price' style='text-align:left;direction:ltr;' value='$price'></td><td>(مبلغ به " . $currency_type . ")</td></tr>";
+            $admin_table_output .= "</table>";
+            $admin_table_output .= "<br> برای اتصال به درگاه پرداخت میتوانید از نام فیلدهای زیر استفاده نمایید ";
+            $admin_table_output .= "<br />
+                <span style='color:#F00;'>
+                user_email نام فیلد دریافت ایمیل کاربر بایستی user_email انتخاب شود.
+                <br />
+                description نام فیلد  توضیحات پرداخت بایستی description انتخاب شود.
+                <br />
+                user_mobile نام فیلد  موبایل بایستی user_mobile انتخاب شود.
+                <br />
+                user_price اگر کادر مبلغ در بالا خالی باشد می توانید به کاربر اجازه دهید مبلغ را خودش انتخاب نماید . کادر متنی با نام user_price ایجاد نمایید
+                <br/>
+                مانند [text* user_price]
+                </span>	";
+            $admin_table_output .= "<input type='hidden' name='email' value='2'>";
+
+            $admin_table_output .= "<input type='hidden' name='post' value='$post_id'>";
+
+            $admin_table_output .= "</td></tr></table></form>";
+            $admin_table_output .= "</div>";
+            $admin_table_output .= "</div>";
+            $admin_table_output .= "</div>";
+        } else {
+            $admin_table_output = "<p>ابتدا باید یک فرم بسازید و بعد از ساخت می توانید قیمت ان را تعیین کنید</p>";
+        }
+        echo $admin_table_output;
+    }
+
+    add_action('wpcf7_save_contact_form', 'cf7_zarinpal_save_contact_form');
+    function cf7_zarinpal_save_contact_form($cf7)
+    {
+
+        $post_id = sanitize_text_field($_POST['post']);
+
+        if (!empty($_POST['enable'])) {
+            $enable = sanitize_text_field($_POST['enable']);
+            update_post_meta($post_id, "_cf7_zarinpal_enable", $enable);
+        } else {
+            update_post_meta($post_id, "_cf7_zarinpal_enable", 0);
+        }
+
+        $price = sanitize_text_field($_POST['price']);
+        update_post_meta($post_id, "_cf7_zarinpal_price", $price);
+
+        $email = sanitize_text_field($_POST['email']);
+        update_post_meta($post_id, "_cf7_zarinpal_email", $email);
+    }
+
 } else {
     /**
      * Show notice if contact form is not installed or not activated.
