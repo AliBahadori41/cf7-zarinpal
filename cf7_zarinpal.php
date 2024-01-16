@@ -75,6 +75,8 @@ function cf7ZarinpalActivate()
         'callback_url' => '',
         'error_color' => '#f44336',
         'sucess_color' => '#8BC34A',
+        'successfull_transaction_text' => null,
+        'unsuccessfull_transaction_text' => null,
         'currency' => 'IRR'
     );
 
