@@ -36,7 +36,8 @@ function cf7ZarinpalActivate()
         transaction_reference VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NULL,
         gateway VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
         price bigint(11) DEFAULT '0' NOT NULL,
-        created_at bigint(11) DEFAULT '0' NOT NULL,
+        created_at timestamp DEFAULT '0' NOT NULL,
+        currency VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
         email VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci  NULL,
         description VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
         user_mobile VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci  NULL,
@@ -99,6 +100,23 @@ function cf7ZarinpalCreatePage($title, $body)
 	</html>';
     return $tmp;
 }
+
+/**
+ * Return a reable message for user.
+ */
+function cf7ZarinpalCreateMessage($title, $body, $onlyText = null)
+{
+    if ($onlyText != null) {
+        return $onlyText;
+    }
+
+    $title = in_array($title, [null, ""]) ? 'وضعیت تراکنش' : $title;
+
+    $tmp = "<div style='border:#CCC 1px solid; width:90%;border-radius: 20px;padding: 20px;'>$title : $body </div>";
+
+    return $tmp;
+}
+
 
 /**
  * De-Active plugin
@@ -261,14 +279,29 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                     ],
                 ];
 
-                $result = request_payment($param);
+                $result = request_payment('request', $param);
 
                 if (is_string($result)) {
                     echo "خطا دراتصال به درگاه : " . $result;
                 } else {
                     if ($result['data']['code'] === 100) {
+
+                        $authority = $result['data']['authority'];
+
+                        $wpdb->insert(getTableName(), [
+                            'idform' => $postid,
+                            'transaction_authority' => $authority,
+                            'gateway' => 'Zarinpal',
+                            'price' => $amount,
+                            'created_at' => date('Y/m/d H:i:s'),
+                            'email' => $user_email,
+                            'currency' => $zarinpal_setting['currency'],
+                            'user_mobile' => $user_mobile,
+                            'description' => $description,
+                            'status' => 'none',
+                        ], ['%d', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s']);
                        
-                        header('Location: https://www.zarinpal.com/pg/StartPay/' . $result['data']['authority']);
+                        header('Location: https://www.zarinpal.com/pg/StartPay/' . $authority);
                         exit;
                     } else {
 
@@ -357,9 +390,10 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                         <td>
                             <input dir="ltr" value="<?php echo $zarinpal_setting['callback_url']; ?>" required type="text" name="callback_url" id="callback_url" placeholder="آدرس بازگشت از درگاه" class="regular-text" style="display: block;">
                             <span class="description">
-                                یک برگه ایجاد کنید و این کد کوتاه [zarinpal_result_payment] را در ان قرار دهید.
+                                یک برگه ایجاد کنید و این کد کوتاه [zarinpal_payment_result] را در ان قرار دهید.
                                 <br>
-                                <strong>
+                                <strong style="color:red;">
+                                    *
                                     این مورد اجباری می باشد.
                                 </strong>
                             </span>
@@ -368,7 +402,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                     <tr>
                         <th scope="row">
                             <label for="successfull_transaction_text">
-                                متن تراکنش موفق :
+                                متن تراکنش موفق
                             </label>
                         </th>
                         <td>
@@ -385,7 +419,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                     <tr>
                         <th scope="row">
                             <label for="unsuccessfull_transaction_text">
-                                متن تراکنش ناموفق :
+                                متن تراکنش ناموفق
                             </label>
                         </th>
                         <td>
@@ -437,9 +471,66 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
     <?php
     }
 
+    function cf7_zarinpal_verify_transaction($atts)
+    {
+        $status = $_GET['Status'];
+        $table_name = getTableName();
+        $authority = $_GET['Authority'];
+        $zarinpal_setting = get_option('cf7_zarinpal');
+        global $wpdb;
 
+        $cf_Form = $wpdb->get_row("SELECT * FROM $table_name WHERE transaction_authority =  '$authority'");
+    
+        if (! $cf_Form) {
+            $body = '<b style="color:' . $zarinpal_setting['error_color'] . ';">تراکنشی که قصد تایید آن را دارید پیدا نشد.</b>';
+            return cf7ZarinpalCreateMessage("تراکنش پیدا نشد", $body);
+        }
 
-    add_action('wpcf7_admin_after_additional_settings', 'cf7_zarinpal_admin_after_additional_settings');
+        if ($status == 'OK') {
+            $params = [
+                'merchant_id' => $zarinpal_setting['merchant_id'],
+                'authority' => $authority,
+                'amount' => $cf_Form->cost,
+            ];
+    
+            $result = request_payment('verify', $params);
+    
+            if (is_string($result)) {
+                $body = 'خطا در اتصال به درگاه : ' . $result;
+                return cf7ZarinpalCreateMessage(null, $body);
+            }
+            else  {
+                if ($result['data']['code'] === 100) {
+                    $res=$result ['data']['ref_id'];
+                    $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'success', 'transid' => $res), array('transid' => $authority), array('%s', '%s'), array('%s'));
+                    $body = '<b style="color:' . $sucess_color . ';">' . stripslashes(str_replace('[transaction_id]',   $res, $Theme_Message)) . '</b>';
+                    return cf7ZarinpalCreateMessage("", $body);
+                } elseif ($result['data']['code'] === 101) {
+                    $res=$result ['data']['ref_id'];
+                    $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'success', 'transid' => $res), array('transid' => $authority), array('%s', '%s'), array('%s'));
+                    $body = '<b style="color:' . $sucess_color . ';">' . stripslashes(str_replace('[transaction_id]',   $res, $Theme_Message)) . '</b>';
+                    return cf7ZarinpalCreateMessage("", $body);
+                } else {
+                    $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'error'), array('transid' =>  $authority), array('%s'), array('%s'));
+                    $body = '<b style="color:' . $error_color . ';">' . $theme_error_message . '</b>';
+                    $body .= '</br>';
+                    $body .= ' خطا : ';
+                    $body .= error_message($result['errors']['code']);
+                    return cf7ZarinpalCreateMessage("", $body);
+                }
+            }
+        }
+        else if($status == 'NOK') {
+            
+            updateTransctionStatus($authority, $status = 'canceled');
+            $body = 'پرداخت توسط کاربر لغو شد.';
+            return cf7ZarinpalCreateMessage("", $body);
+        }
+    
+    }
+    add_shortcode('zarinpal_payment_result', 'cf7_zarinpal_verify_transaction');
+    
+
     function cf7_zarinpal_editor_panels($panels)
     {
         $new_page = array(
@@ -453,9 +544,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 
         return $panels;
     }
-
     add_filter('wpcf7_editor_panels', 'cf7_zarinpal_editor_panels');
-
 
     function cf7_zarinpal_admin_after_additional_settings($cf7)
     {
@@ -510,8 +599,8 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         }
         echo $admin_table_output;
     }
+    add_action('wpcf7_admin_after_additional_settings', 'cf7_zarinpal_admin_after_additional_settings');
 
-    add_action('wpcf7_save_contact_form', 'cf7_zarinpal_save_contact_form');
     function cf7_zarinpal_save_contact_form($cf7)
     {
 
@@ -530,6 +619,20 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         $email = sanitize_text_field($_POST['email']);
         update_post_meta($post_id, "_cf7_zarinpal_email", $email);
     }
+    add_action('wpcf7_save_contact_form', 'cf7_zarinpal_save_contact_form');
+
+
+    function updateTransctionStatus(string $authority, string $status)
+    {
+        global $wpdb;
+        $table_name = getTableName();
+        $wpdb->get_row("SELECT * FROM $table_name WHERE transaction_authority =  '$authority'");
+        $wpdb->update(
+            $table_name,
+            ['status' => $status],
+            ['transaction_authority' => $authority],
+        );
+    }
 
 } else {
     /**
@@ -537,11 +640,11 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
      */
     function cf7_zarinpal_my_admin_notice()
     {
-    ?>
-        <div class="error">
-            <p> <?php echo _e('<b> افزونه درگاه بانکی برای افزونه Contact Form 7 :</b> Contact Form 7 باید فعال باشد ', 'my-text-domain') ?>
-        </div>
-<?php
+        ?>
+            <div class="error">
+                <p> <?php echo _e('<b> افزونه درگاه بانکی برای افزونه Contact Form 7 :</b> Contact Form 7 باید فعال باشد ', 'my-text-domain') ?>
+            </div>
+        <?php
     }
     add_action('admin_notices', 'cf7_zarinpal_my_admin_notice');
 }
@@ -550,11 +653,11 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 /**
  * Send payment request to zarinpal.
  */
-function request_payment(array $param)
+function request_payment(string $action , array $param)
 {
 
     $jsonData = json_encode($param);
-    $ch = curl_init('https://api.zarinpal.com/pg/v4/payment/request.json');
+    $ch = curl_init("https://api.zarinpal.com/pg/v4/payment/$action.json");
     curl_setopt($ch, CURLOPT_USERAGENT, 'Zarinpal Rest Api v4');
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
     curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
