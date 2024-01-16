@@ -310,6 +310,10 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 
     function cf7_zarinpal_admin_table()
     {
+        if (!current_user_can("manage_options")) {
+            wp_die(__("You do not have sufficient permissions to access this page."));
+        }
+
         if (isset($_POST['zarinpal_setting_submit'])) {
             $options['merchant_id'] = sanitize_text_field($_POST['merchant_id']);
             $options['callback_url'] = sanitize_text_field($_POST['callback_url']);
@@ -462,6 +466,119 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
             </table>
         </form>
     <?php
+    }
+
+
+    function cf7_zarinpal_admin_transactions_list()
+    {
+        if (!current_user_can("manage_options")) {
+            wp_die(__("You do not have sufficient permissions to access this page."));
+        }
+
+        global $wpdb;
+
+        $pagenum = isset($_GET['pagenum']) ? absint($_GET['pagenum']) : 1;
+        $limit = 6;
+        $offset = ($pagenum - 1) * $limit;
+        $table_name = getTableName();
+
+        $transactions = $wpdb->get_results("SELECT * FROM $table_name  ORDER BY $table_name.id DESC LIMIT $offset, $limit", ARRAY_A);
+        $total = $wpdb->get_var("SELECT COUNT($table_name.id) FROM $table_name where (status NOT like 'none') ");
+        $num_of_pages = ceil($total / $limit);
+        ?>
+            <div class="wrap">
+                <h1>
+                    تراکنش های زرین پال
+                </h1>
+                <table class="widefat post fixed" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th scope="col" id="name" width="15%" class="manage-column" style="">نام فرم</th>
+                            <th scope="col" id="name" width="" class="manage-column" style="">تاريخ</th>
+                            <th scope="col" id="name" width="" class="manage-column" style="">ایمیل</th>
+                            <th scope="col" id="name" width="15%" class="manage-column" style="">مبلغ</th>
+                            <th scope="col" id="name" width="15%" class="manage-column" style="">شناسه تراکنش</th>
+                            <th scope="col" id="name" width="13%" class="manage-column" style="">وضعیت</th>
+                        </tr>
+                    </thead>
+                    <tfoot>
+                        <tr>
+                            <th scope="col" id="name" width="15%" class="manage-column" style="">نام فرم</th>
+                            <th scope="col" id="name" width="" class="manage-column" style="">تاريخ</th>
+                            <th scope="col" id="name" width="" class="manage-column" style="">ایمیل</th>
+                            <th scope="col" id="name" width="15%" class="manage-column" style="">مبلغ</th>
+                            <th scope="col" id="name" width="15%" class="manage-column" style="">شناسه تراکنش</th>
+                            <th scope="col" id="name" width="13%" class="manage-column" style="">وضعیت</th>
+                        </tr>
+                    </tfoot>
+                    <tbody>
+
+                        <?php
+                            if (count($transactions) == 0) {
+                                ?>
+                                <tr class="alternate author-self status-publish iedit" valign="top">
+                                    <td colspan='6' style="text-align: center;">تراکنشی یافت نشد</td>
+                                </tr>
+                                <?php
+                            } else {
+
+                                foreach ($transactions as $transaction):
+                                ?>
+                                <tr class="alternate author-self status-publish iedit" valign="top">
+                                    <td><?php echo get_the_title($transaction['idform']); ?></td>
+                                    <td><?php echo $transaction['created_at']; ?></td>
+                                    <td><?php echo $transaction['email']; ?></td>
+                                    <td>
+                                        <?php 
+                                            echo number_format($transaction['price']);
+                                            echo $transaction['currency'] == 'IRT' ? ' تومان ': ' ریال ';
+                                        ?>
+                                    </td>
+                                    <td><?php echo $transaction['transaction_reference'] ?? '-'; ?></td>
+                                    <td>
+                                        <?php 
+                                            if ($transaction['status'] == "success") {
+                                                echo '<span style="color:#0C9F55">موفقیت آمیز</span>';
+                                            } else if ($transaction['status'] == "canceled") {
+                                                echo '<span style="color:#f00">لغو شده</span>';
+                                            } else if ($transaction['status'] == "none") {
+                                                echo '<span style="color:#f00">انجام نشده</span>';
+                                            }else if ($transaction['status'] == "error"){
+                                                echo '<span style="color:#f00">خطا/b>';
+                                                
+                                            }
+                                        ?>
+                                    </td>
+                                </tr>
+                                <?php 
+                                endforeach;
+                            }
+
+                            $page_links = paginate_links(array(
+                                'base' => add_query_arg('pagenum', '%#%'),
+                                'format' => '',
+                                'prev_text' => __('&laquo;', 'aag'),
+                                'next_text' => __('&raquo;', 'aag'),
+                                'total' => $num_of_pages,
+                                'current' => $pagenum
+                            ));
+                    
+                            if ($page_links) {
+                                ?>
+                                <center>
+                                    <div class="tablenav">
+                                        <div class="tablenav-pages"  style="float:none; margin: 1em 0">
+                                            <?php echo $page_links; ?>
+                                        </div>
+                                    </div>
+                                </center>
+                                <?php
+                            }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php
     }
 
     function cf7_zarinpal_verify_transaction($atts)
