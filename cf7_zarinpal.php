@@ -5,7 +5,7 @@ Plugin URI: https://github.com/AliBahadori41/cf7-zarinpal
 Description: اتصال فرم های Contact Form 7 به درگاه پرداخت ZarinPal
 Author: Ali Bahadori
 Author URI: https://bahadori.dev
-Version: 1.0
+Version: 2.0
 */
 
 if (!defined('ABSPATH')) exit;
