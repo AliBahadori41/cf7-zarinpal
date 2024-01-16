@@ -478,7 +478,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         global $wpdb;
 
         $pagenum = isset($_GET['pagenum']) ? absint($_GET['pagenum']) : 1;
-        $limit = 6;
+        $limit = 10;
         $offset = ($pagenum - 1) * $limit;
         $table_name = getTableName();
 
@@ -562,21 +562,22 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                                 'total' => $num_of_pages,
                                 'current' => $pagenum
                             ));
-                    
-                            if ($page_links) {
-                                ?>
-                                <center>
-                                    <div class="tablenav">
-                                        <div class="tablenav-pages"  style="float:none; margin: 1em 0">
-                                            <?php echo $page_links; ?>
-                                        </div>
-                                    </div>
-                                </center>
-                                <?php
-                            }
                         ?>
                     </tbody>
                 </table>
+                <?php
+                    if ($page_links) {
+                        ?>
+                        <center>
+                            <div class="tablenav">
+                                <div class="tablenav-pages"  style="float:none; margin: 1em 0">
+                                    <?php echo $page_links; ?>
+                                </div>
+                            </div>
+                        </center>
+                        <?php
+                    }
+                ?>
             </div>
         <?php
     }
