@@ -36,7 +36,7 @@ function cf7ZarinpalActivate()
         transaction_reference VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NULL,
         gateway VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
         price bigint(11) DEFAULT '0' NOT NULL,
-        created_at timestamp DEFAULT '0' NOT NULL,
+        created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         currency VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
         email VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci  NULL,
         description VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
@@ -170,7 +170,7 @@ function cf7_zarinpal_deactivate()
     }
 
 
-    delete_option("cf7_zarinpal");
+    // delete_option("cf7_zarinpal");
     delete_option("cf7_zarinpal_my_plugin_notice_shown");
 }
 
@@ -287,7 +287,6 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                             'transaction_authority' => $authority,
                             'gateway' => 'Zarinpal',
                             'price' => $amount,
-                            'created_at' => date('Y/m/d H:i:s'),
                             'email' => $user_email,
                             'currency' => $zarinpal_setting['currency'],
                             'user_mobile' => $user_mobile,
