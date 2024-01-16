@@ -474,7 +474,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         if (!current_user_can("manage_options")) {
             wp_die(__("You do not have sufficient permissions to access this page."));
         }
-
+        require_once 'lib/jalali.php';
         global $wpdb;
 
         $pagenum = isset($_GET['pagenum']) ? absint($_GET['pagenum']) : 1;
@@ -493,22 +493,22 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                 <table class="widefat post fixed" cellspacing="0">
                     <thead>
                         <tr>
-                            <th scope="col" id="name" width="15%" class="manage-column" style="">نام فرم</th>
-                            <th scope="col" id="name" width="" class="manage-column" style="">تاريخ</th>
-                            <th scope="col" id="name" width="" class="manage-column" style="">ایمیل</th>
-                            <th scope="col" id="name" width="15%" class="manage-column" style="">مبلغ</th>
-                            <th scope="col" id="name" width="15%" class="manage-column" style="">شناسه تراکنش</th>
-                            <th scope="col" id="name" width="13%" class="manage-column" style="">وضعیت</th>
+                            <th scope="col" id="name" width="15%" class="manage-column">نام فرم</th>
+                            <th scope="col" id="name" width="" class="manage-column">تاريخ</th>
+                            <th scope="col" id="name" width="" class="manage-column">ایمیل</th>
+                            <th scope="col" id="name" width="15%" class="manage-column">مبلغ</th>
+                            <th scope="col" id="name" width="15%" class="manage-column">شناسه تراکنش</th>
+                            <th scope="col" id="name" width="13%" class="manage-column">وضعیت</th>
                         </tr>
                     </thead>
                     <tfoot>
                         <tr>
-                            <th scope="col" id="name" width="15%" class="manage-column" style="">نام فرم</th>
-                            <th scope="col" id="name" width="" class="manage-column" style="">تاريخ</th>
-                            <th scope="col" id="name" width="" class="manage-column" style="">ایمیل</th>
-                            <th scope="col" id="name" width="15%" class="manage-column" style="">مبلغ</th>
-                            <th scope="col" id="name" width="15%" class="manage-column" style="">شناسه تراکنش</th>
-                            <th scope="col" id="name" width="13%" class="manage-column" style="">وضعیت</th>
+                            <th scope="col" id="name" width="15%" class="manage-column">نام فرم</th>
+                            <th scope="col" id="name" width="" class="manage-column">تاريخ</th>
+                            <th scope="col" id="name" width="" class="manage-column">ایمیل</th>
+                            <th scope="col" id="name" width="15%" class="manage-column">مبلغ</th>
+                            <th scope="col" id="name" width="15%" class="manage-column">شناسه تراکنش</th>
+                            <th scope="col" id="name" width="13%" class="manage-column">وضعیت</th>
                         </tr>
                     </tfoot>
                     <tbody>
@@ -526,7 +526,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
                                 ?>
                                 <tr class="alternate author-self status-publish iedit" valign="top">
                                     <td><?php echo get_the_title($transaction['idform']); ?></td>
-                                    <td><?php echo $transaction['created_at']; ?></td>
+                                    <td><?php echo jdate('Y/n/j H:i:s', strtotime($transaction['created_at'])); ?></td>
                                     <td><?php echo $transaction['email']; ?></td>
                                     <td>
                                         <?php 
