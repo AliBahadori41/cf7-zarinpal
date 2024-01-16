@@ -106,17 +106,9 @@ function cf7ZarinpalCreatePage($title, $body)
 /**
  * Return a reable message for user.
  */
-function cf7ZarinpalCreateMessage($title, $body, $onlyText = null)
+function cf7ZarinpalCreateMessage($body, $title = null)
 {
-    if ($onlyText != null) {
-        return $onlyText;
-    }
-
-    $title = in_array($title, [null, ""]) ? 'وضعیت تراکنش' : $title;
-
-    $tmp = "<div style='border:#CCC 1px solid; width:90%;border-radius: 20px;padding: 20px;'>$title : $body </div>";
-
-    return $tmp;
+    return "<div style='border:#CCC 1px solid; width:90%;border-radius: 20px;padding: 20px;'>$title $body </div>";
 }
 
 
@@ -485,48 +477,48 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
     
         if (! $cf_Form) {
             $body = '<b style="color:' . $zarinpal_setting['error_color'] . ';">تراکنشی که قصد تایید آن را دارید پیدا نشد.</b>';
-            return cf7ZarinpalCreateMessage("تراکنش پیدا نشد", $body);
+            return cf7ZarinpalCreateMessage($body, "تراکنش پیدا نشد");
         }
 
         if ($status == 'OK') {
             $params = [
                 'merchant_id' => $zarinpal_setting['merchant_id'],
                 'authority' => $authority,
-                'amount' => $cf_Form->cost,
+                'amount' => $cf_Form->price,
             ];
     
             $result = request_payment('verify', $params);
     
             if (is_string($result)) {
                 $body = 'خطا در اتصال به درگاه : ' . $result;
-                return cf7ZarinpalCreateMessage(null, $body);
+                return cf7ZarinpalCreateMessage($body);
             }
             else  {
                 if ($result['data']['code'] === 100) {
-                    $res=$result ['data']['ref_id'];
-                    $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'success', 'transid' => $res), array('transid' => $authority), array('%s', '%s'), array('%s'));
-                    $body = '<b style="color:' . $sucess_color . ';">' . stripslashes(str_replace('[transaction_id]',   $res, $Theme_Message)) . '</b>';
-                    return cf7ZarinpalCreateMessage("", $body);
+                    $ref_id = $result ['data']['ref_id'];
+                    updateTransctionStatus($authority, ['status' => 'success', 'transaction_reference' => $ref_id]);
+                    $body = '<b style="color:' .  $zarinpal_setting['sucess_color'] . ';">' . stripslashes(str_replace('[zarinpal_transaction_ref]', $ref_id, $zarinpal_setting['successfull_transaction_text'])) . '</b>';
+                    return cf7ZarinpalCreateMessage($body);
                 } elseif ($result['data']['code'] === 101) {
-                    $res=$result ['data']['ref_id'];
-                    $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'success', 'transid' => $res), array('transid' => $authority), array('%s', '%s'), array('%s'));
-                    $body = '<b style="color:' . $sucess_color . ';">' . stripslashes(str_replace('[transaction_id]',   $res, $Theme_Message)) . '</b>';
-                    return cf7ZarinpalCreateMessage("", $body);
+                    $ref_id = $result ['data']['ref_id'];
+                    updateTransctionStatus($authority, ['status' => 'success', 'transaction_reference' => $ref_id]);
+                    $body = '<b style="color:' .  $zarinpal_setting['sucess_color'] . ';">' . stripslashes(str_replace('[zarinpal_transaction_ref]', $ref_id, $zarinpal_setting['successfull_transaction_text'])) . '</b>';
+                    return cf7ZarinpalCreateMessage($body);
                 } else {
-                    $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'error'), array('transid' =>  $authority), array('%s'), array('%s'));
-                    $body = '<b style="color:' . $error_color . ';">' . $theme_error_message . '</b>';
-                    $body .= '</br>';
-                    $body .= ' خطا : ';
-                    $body .= error_message($result['errors']['code']);
-                    return cf7ZarinpalCreateMessage("", $body);
+                    updateTransctionStatus($authority, ['status' => 'error']);
+                    $body = '<b style="color:' .  $zarinpal_setting['error_color'] . ';">' 
+                    . stripslashes(str_replace('[zarinpal_error_message]', error_message($result['errors']['code']), $zarinpal_setting['unsuccessfull_transaction_text']))
+                    . '</b>';
+                    echo $result['errors']['code'];
+                    return cf7ZarinpalCreateMessage($body);
                 }
             }
         }
         else if($status == 'NOK') {
             
-            updateTransctionStatus($authority, $status = 'canceled');
+            updateTransctionStatus($authority, ['status' => 'canceled']);
             $body = 'پرداخت توسط کاربر لغو شد.';
-            return cf7ZarinpalCreateMessage("", $body);
+            return cf7ZarinpalCreateMessage($body);
         }
     
     }
@@ -623,15 +615,17 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
     }
     add_action('wpcf7_save_contact_form', 'cf7_zarinpal_save_contact_form');
 
-
-    function updateTransctionStatus(string $authority, string $status)
+    /**
+     * Update tranaction status.
+     */
+    function updateTransctionStatus(string $authority, array $data)
     {
         global $wpdb;
         $table_name = getTableName();
         $wpdb->get_row("SELECT * FROM $table_name WHERE transaction_authority =  '$authority'");
         $wpdb->update(
             $table_name,
-            ['status' => $status],
+            $data,
             ['transaction_authority' => $authority],
         );
     }
